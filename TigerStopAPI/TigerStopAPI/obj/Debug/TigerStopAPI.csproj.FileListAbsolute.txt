@@ -1,0 +1,6 @@
+C:\Users\jshoup\Documents\TigerStopAPI\TigerStopAPI\obj\Debug\TigerStopAPI.csprojResolveAssemblyReference.cache
+C:\Users\jshoup\Documents\TigerStopAPI\TigerStopAPI\bin\Debug\TigerStopAPI.dll
+C:\Users\jshoup\Documents\TigerStopAPI\TigerStopAPI\bin\Debug\TigerStopAPI.pdb
+C:\Users\jshoup\Documents\TigerStopAPI\TigerStopAPI\obj\Debug\TigerStopAPI.dll
+C:\Users\jshoup\Documents\TigerStopAPI\TigerStopAPI\obj\Debug\TigerStopAPI.pdb
+C:\Users\jshoup\Documents\TigerStopAPI\TigerStopAPI\bin\Debug\TigerStopAPI.XML
