@@ -8,4 +8,4 @@
 
 
 ## License
-> TigerStopSDK-Example is licensed under the [MIT License](LICENSE.md)
+> TigerStopSDK is licensed under the [MIT License](LICENSE.md)
