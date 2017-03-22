@@ -18,6 +18,7 @@ namespace TigerStopAPI
         private AutoResetEvent cyclingEvent = new AutoResetEvent(false);
         private AutoResetEvent deadmanOffEvent = new AutoResetEvent(false);
         private AutoResetEvent deadmanOnEvent = new AutoResetEvent(false);
+        private AutoResetEvent homingEvent = new AutoResetEvent(false);
 
         //  =  =  =  EVENTS  =  =  =
         public EventHandler IO_Error;
@@ -117,6 +118,10 @@ namespace TigerStopAPI
             else if (ack.Message.Contains("DMF"))
             {
                 deadmanOnEvent.Set();
+            }
+            else if (ack.Message.Contains("MHF"))
+            {
+                homingEvent.Set();
             }
             // Otherwise, it was a general ack and release the waiting event.
             else
@@ -361,7 +366,11 @@ namespace TigerStopAPI
         /// </summary>
         public void HomeDevice()
         {
+            homingEvent.Reset();
+
             base.QueueCommand("mh");
+
+            homingEvent.WaitOne(base.TimeOut);
         }
 
         // --- public void CycleTool() ---

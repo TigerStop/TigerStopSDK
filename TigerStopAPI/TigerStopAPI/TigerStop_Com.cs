@@ -60,6 +60,7 @@ namespace TigerStopAPI
         //  -  MOVING
         private bool isMoving = false;
         private bool isMoveStart = false;
+        private bool isHoming = false;
         //  -  CYCLING
         private bool isCyclingTool = false;
         private bool isCycleStart = false;
@@ -425,6 +426,11 @@ namespace TigerStopAPI
 
                     readBuffer.Clear();
                 }
+                // The scan command is a altered move command, which means an 'MGS' will be seen and need to be cleared before the marks come in.
+                else if (string.Join("", readBuffer.ToArray()).Contains("MGS"))
+                {
+                    readBuffer.Clear();
+                }
                 // Otherwise, we found a mark and need to add it to our marks list.
                 else
                 {
@@ -451,137 +457,146 @@ namespace TigerStopAPI
         /// </summary>
         private void HandleAck()
         {
-            if (!isScanning)
+            // If there isn't any kind of 'NACK' in the message, we have to treat it as a legitimate message.
+            if (!string.Join("", readBuffer.ToArray()).Contains("NACK"))
             {
-                // Started a move or cycle.
-                if ((isMoveStart && string.Join("", readBuffer.ToArray()).Contains("MGS")) ^ (isCycleStart && string.Join("", readBuffer.ToArray()).Contains("MTS")))
+                if (!isScanning)
                 {
-                    if (isMoveStart)
+                    // Started a move or too cycle.
+                    if ((isMoveStart && string.Join("", readBuffer.ToArray()).Contains("MGS")) ^ (isCycleStart && string.Join("", readBuffer.ToArray()).Contains("MTS")))
                     {
-                        isMoveStart = false;
-                        isMoving = true;
-
-                        double.TryParse(string.Join("", readBuffer.ToArray()).TrimStart(new char[] { 'M', 'G', 'S', ' ' }).TrimEnd(new char[] { '\r', '\n' }), out targetPosition);
-                    }
-                    else
-                    {
-                        isCycleStart = false;
-                        isCyclingTool = true;
-                    }
-
-                    lastAck.Acknowledgement = string.Join("", readBuffer.ToArray());
-                    lastAck.TimeRecieved = DateTime.Now;
-
-                    readBuffer.Clear();
-                }
-                // Finished a move or cycle.
-                else if ((isMoving && string.Join("", readBuffer.ToArray()).Contains("MGF")) ^ (isCyclingTool && string.Join("", readBuffer.ToArray()).Contains("MTF")))
-                {
-                    if (isMoving)
-                    {
-                        double finalPosition;
-
-                        lastAck.Acknowledgement = "MGF";
-                        lastAck.TimeRecieved = DateTime.Now;
-
-                        if (double.TryParse(string.Join("", readBuffer.ToArray()).TrimStart(new char[] { '\n', 'M', 'G', 'F', ' ' }).TrimEnd(new char[] { '\r', '\n' }), out finalPosition))
+                        if (isMoveStart)
                         {
-                            Position = finalPosition;
+                            isMoveStart = false;
+                            isMoving = true;
+                            
+                            double.TryParse(string.Join("", readBuffer.ToArray()).TrimStart(new char[] { 'M', 'G', 'S', ' ' }).TrimEnd(new char[] { '\r', '\n' }), out targetPosition);
                         }
-
-                        SendData(this, new MessageEvent("MGF"));
-
-                        isMoving = false;
-                    }
-
-                    if (isCyclingTool)
-                    {
-                        isDmOff = false;
-                        isDmOn = false;
-
-                        lastAck.Acknowledgement = "MTF";
-                        lastAck.TimeRecieved = DateTime.Now;
-
-                        SendData(this, new MessageEvent("MTF"));
-
-                        isCyclingTool = false;
-                    }
-
-                    readBuffer.Clear();
-
-                    ClearCommand(false);
-
-                    SendCommand();
-                }
-                // In the middle of a move or cycle.
-                else if (isMoving || isCyclingTool)
-                {
-                    lastAck.Acknowledgement = string.Join("", readBuffer.ToArray());
-                    lastAck.TimeRecieved = DateTime.Now;
-
-                    if (!CheckSamePosition())
-                    {
-                        CheckMovement();
-                    }
-
-                    // If we see a 'MSS', the system needs to stop immediately.
-                    if (lastAck.Acknowledgement.Contains("MSS"))
-                    {
-                        ClearCommand(true);
-                        StopOperation(this, EventArgs.Empty);
-                    }
-
-                    readBuffer.Clear();
-                }
-                else if (!isMoving && !isCyclingTool)
-                {
-                    lastAck.Acknowledgement = string.Join("", readBuffer.ToArray());
-                    lastAck.TimeRecieved = DateTime.Now;
-
-                    if (!lastCommand.Command.SequenceEqual(scanCommand))
-                    {
-                        SendData(this, new MessageEvent(string.Join("", readBuffer.ToArray())));
-
-                        if (lastCommand.Command.SequenceEqual(positionQueryCommand))
+                        else
                         {
+                            isCycleStart = false;
+                            isCyclingTool = true;
+                        }
+                        
+                        lastAck.Acknowledgement = string.Join("", readBuffer.ToArray());
+                        lastAck.TimeRecieved = DateTime.Now;
+                        
+                        readBuffer.Clear();
+                    }
+                    // Finished a move or tool cycle.
+                    else if (isMoving ^ isCyclingTool)
+                    {
+                        if (string.Join("", readBuffer.ToArray()).Contains("MGF"))
+                        {
+                            double finalPosition;
+                            
+                            lastAck.Acknowledgement = "MGF";
+                            lastAck.TimeRecieved = DateTime.Now;
+
+                            if (double.TryParse(string.Join("", readBuffer.ToArray()).TrimStart(new char[] { '\n', 'M', 'G', 'F', ' ' }).TrimEnd(new char[] { '\r', '\n' }), out finalPosition))
+                            {
+                                Position = finalPosition;
+                            }
+                            
+                            SendData(this, new MessageEvent("MGF"));
+
+                            isMoving = false;
+                        }
+                        else if (string.Join("", readBuffer.ToArray()).Contains("MTF"))
+                        {
+                            isDmOff = false;
+                            isDmOn = false;
+                            
+                            lastAck.Acknowledgement = "MTF";
+                            lastAck.TimeRecieved = DateTime.Now;
+                            
+                            SendData(this, new MessageEvent("MTF"));
+
+                            isCyclingTool = false;
+                        }
+                        // If neither 'MGF' or 'MTF' is seen, a move or tool cycle is in progress.
+                        else
+                        {
+                            lastAck.Acknowledgement = string.Join("", readBuffer.ToArray());
+                            lastAck.TimeRecieved = DateTime.Now;
+
                             CheckSamePosition();
                         }
-                    }
-                    //If the last command was a scan command, then we're picking up position data and we can try and update the position with it.
-                    else
-                    {
-                        CheckSamePosition();
-                    }
+                        
+                        readBuffer.Clear();
 
+                        ClearCommand(false);
+
+                        SendCommand();
+                    }
+                    // Is homing the device.
+                    else if (isHoming)
+                    {
+                        if (string.Join("", readBuffer.ToArray()).Trim() == "0")
+                        {
+                            lastAck.Acknowledgement = "MHF";
+                            lastAck.TimeRecieved = DateTime.Now;
+
+                            SendData(this, new MessageEvent("MHF"));
+                            
+                            isHoming = false;
+
+                            ClearCommand(false);
+                            
+                            SendCommand();
+                        }
+                        
+                        readBuffer.Clear();
+                    }
+                    else if (!isMoving && !isCyclingTool)
+                    {
+                        lastAck.Acknowledgement = string.Join("", readBuffer.ToArray());
+                        lastAck.TimeRecieved = DateTime.Now;
+                        
+                        if (!lastCommand.Command.SequenceEqual(scanCommand))
+                        {
+                            SendData(this, new MessageEvent(string.Join("", readBuffer.ToArray())));
+
+                            if (lastCommand.Command.SequenceEqual(positionQueryCommand))
+                            {
+                                CheckSamePosition();
+                            }
+
+                            ClearCommand(false);
+                        }
+                        else
+                        {
+                            CheckSamePosition();
+
+                            ClearCommand(false);
+                        }
+                        
+                        readBuffer.Clear();
+
+                        SendCommand();
+                    }
+                }
+                else
+                {
+                    lastAck.Acknowledgement = string.Join("", readBuffer.ToArray());
+                    lastAck.TimeRecieved = DateTime.Now;
+                    
+                    SendData(this, new MessageEvent(string.Join(",", scanMarks.ToArray())));
+                    
+                    scanMarks.Clear();
+                    
+                    isScanning = false;
+                    
                     readBuffer.Clear();
 
                     ClearCommand(false);
 
                     SendCommand();
                 }
-                // If we received 'NACK', then the machine was not able to comprehend or complete the last command and we need to resend it.
-                else if (string.Join("", readBuffer.ToArray()).Contains("NACK"))
-                {
-                    RetryCommand();
-                }
             }
-            // Running a scan.
             else
             {
-                lastAck.Acknowledgement = string.Join("", readBuffer.ToArray());
-                lastAck.TimeRecieved = DateTime.Now;
-
-                SendData(this, new MessageEvent(string.Join(",", scanMarks.ToArray())));
-
-                scanMarks.Clear();
-
-                isScanning = false;
-
-                readBuffer.Clear();
-
-                ClearCommand(false);
-
-                SendCommand();
+                RetryCommand();
             }
         }
 
@@ -694,7 +709,7 @@ namespace TigerStopAPI
                 //Move home
                 case 0x68:
                     TimeOut = homeTimeout;
-                    isMoveStart = true;
+                    isHoming = true;
                     WriteToSerial(moveHomeCommand);
                     break;
                 //Move tool

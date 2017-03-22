@@ -1,0 +1,617 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>TigerStopAPI</name>
+    </assembly>
+    <members>
+        <member name="T:TigerStopAPI.MessageEvent">
+            <summary>
+            A simpler, more manageable, class of event arguments that is used to pass data between events and event subscribers.
+            </summary>
+        </member>
+        <member name="T:TigerStopAPI.TigerStop_Com">
+            <summary>
+            Provides serial communication ability focused on a connection first communication infrastructure. Creates a FIFO command queue with
+            each command executed in order after receiving an ack for the previous command's completion.
+            </summary>
+        </member>
+        <member name="T:TigerStopAPI.TigerStop_Com.LastCommand">
+            <summary>
+            A struct with fields to track the last command sent from the system to the machine and the time it was sent.
+            </summary>
+        </member>
+        <member name="T:TigerStopAPI.TigerStop_Com.LastAck">
+            <summary>
+            A struct with fields to track the last acknowledgment received from the machine by the system and the time it was received.
+            </summary>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.#ctor(System.String,System.Int32)">
+            <summary>
+            Basic parameterized constructor for TigerStop_Com.
+            </summary>
+            <param name="comPort"> A 'string' denoting the comport name of the serial port to connect to. </param>
+            <param name="baud"> An 'int' denoting the baud rate to connect to the serial port at. </param>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.SerialPort_AddSetting(System.Object,System.EventArgs)">
+            <summary>
+            This event handler is used specifically with the SerialPort_DataRecieved() event handler when the system is still in setup and obtaining all of the settings.
+            </summary>
+            <param name="sender"></param>
+            <param name="e"></param>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.SerialPort_UpdateSetting(System.Object,System.EventArgs)">
+            <summary>
+            This event handler is used specifically with the SerialPort_DataReceived() event handler when the system is updating a specific setting.
+            Upon retrieving the specific setting at 'settingIndex', if the returned value can be deciphered, its the new setting value, otherwise just keep the old value.
+            </summary>
+            <param name="sender"></param>
+            <param name="e"></param>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.SerialPort_DataReceived(System.Object,System.IO.Ports.SerialDataReceivedEventArgs)">
+            <summary>
+            This is the main event handler, everything from the machine will be funneled through this event handler. Anytime the serial port buffer receives data, this
+            the SerialPort.DataReceived event will fire and this event handler will be called to take in the data. This event handler is given its own thread to handle the
+            data.
+            </summary>
+            <param name="sender"></param>
+            <param name="e"></param>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.NotifyPropertyChanged(System.String)">
+            <summary>
+            Basic property changed event handler.
+            </summary>
+            <param name="property"> The 'string' name of the property that was changed, to be sent out for others to identify and decide what to do with it. </param>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.HandleData(System.String)">
+            <summary>
+            Takes in a string of data from SerialPort_DataReceived() and parses it with any data in 'readBuffer' to determine if the machine has sent back an
+            ack for us to decipher at any point.
+            </summary>
+            <param name="data"> A 'string' containing data from the serial port to send off to HandleAck() depending the systems current status. </param>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.HandleAck">
+            <summary>
+            Once HandleData() collates the data taken in from SerialPort_DataReceived() and checks it for appropriate acks based on what the system is doing
+            at the moment.
+            </summary>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.QueueCommand(System.String)">
+            <summary>
+            This function is the main interface between the rest of the system and the machine. Any commands that need to be sent to the machine runs through this command.
+            It takes a 'string' command to send to the machine. If the system already has commands queued up, it will add the command to the queue, otherwise it will call 
+            SendCommand() to get the command processed immediately.
+            </summary>
+            <param name="command"> A 'string' that will be converted to a 'byte[]' command that will be sent to the machine. </param>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.CommandConverter(System.String)">
+            <summary>
+            Used specifically to convert 'string's into hex byte commands to send to the machine.
+            </summary>
+            <param name="input"> A 'string' that will be translated. </param>
+            <returns name="command"> Returns a 'byte[]' to be used as a hex byte command by the machine. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.SendCommand">
+            <summary>
+            This function takes the first command from 'writeBuffer' and, depending on the command, sends it to the machine through the proper functions.
+            </summary>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.MoveCommand(System.Byte[])">
+            <summary>
+            Called if the first command seen by SendCommand() is a move command, determine what kind of move command is being sent and set the appropriate flags
+            and timeouts before sending the command to the machine.
+            </summary>
+            <param name="moveCommand"> A 'byte[]' command that will be used to determine which move command is being sent. </param>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.ClearCommand(System.Boolean)">
+            <summary>
+            This function is used to clear out commands from the 'writeBuffer'. If 'allCommands' is 'true', it will clear all commands from the 'writeBuffer'.
+            Otherwise, it will only clear the first command from 'writeBuffer'.
+            </summary>
+            <param name="allCommands"> A 'bool' that determines whether to clear the first command in the list or to clear all of the commands from the list. </param>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.WriteToSerial(System.Byte[])">
+            <summary>
+            This function writes the byte[] command to the machine over the serial port. Also tracks the last command that was sent, in case we need send it again.
+            </summary>
+            <param name="command"> A 'byte' array of converted 'char' characters that the machine will recognize as an actionable command. </param>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.WriteToSerialClean(System.Byte[])">
+            <summary>
+            This function writes the byte[] command to the machine over the serial port. It does not track the last command.
+            </summary>
+            <param name="command"> A 'byte' array of converted 'char' characters that the machine will recognize as an actionable command. </param>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.RetryCommand">
+            <summary>
+            This function sends the last command to the machine in the case the machine did not register or complete the last command. Caution is required
+            when using this function as ‘lastCommand.Command’ may cause the machine to act unexpectedly, such as cycling the tool or moving when the user is unprepared.
+            </summary>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.GetSettings">
+            <summary>
+            This function is used to ask the machine for all of its settings and puts them into a list for future use.
+            </summary>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.CheckSamePosition">
+            <summary>
+            This function is used to determine if the position that the machine is at is the same as the last position that was queried. If the position
+            is the same, the function returns 'true' if the position in the last acknowledgment is the same as the current position we know of. Otherwise,
+            the function returns false.
+            </summary>
+            <returns name="samePostion"> Returns a bool denoting whether the machine is in the same place as the last time position was queried. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.CheckMovement">
+            <summary>
+            This function is used while the machine is moving to double check that the machine is, in fact, moving like it was told to. 
+            </summary>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.ClearPort">
+            <summary>
+            This function is used to clear out the serial port, reading anything currently in the serial port.
+            </summary>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.ClosePort">
+            <summary>
+            Used to close the port when it is no longer in use.
+            </summary>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.OpenPort">
+            <summary>
+            This function takes the stored com port name and baud rate and attempts to open a serial connection to the desired com port.
+            </summary>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.DetectTigerStop">
+            <summary>
+            This function sends the serial command query to the machine to get a hold of its serial number. If the serial number is
+            valid, then SerialPort_DataReceived() will signal the 'serialAck' to allow the function through and to return true.
+            </summary>
+            <returns name="detected"> Returns a 'bool' that signals whether or not the system detected a TigerStop machine on the other end of the connection. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.CheckConnection">
+            <summary>
+            This function goes through all of the necessary checks that ensures the system is connected to a machine. If all of the checks pass
+            a 'bool' is returned 'true' denoting that the system has successfully connected to the machine.
+            </summary>
+            <returns name="isConnected"> Returns a bool denoting whether we were able to connect to a machine with a valid enable code. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.ChangeSetting(System.String,System.Int32)">
+            <summary>
+            Takes a setting command and setting index to update the desired setting in 'settings' at 'index'.
+            </summary>
+            <param name="command"> A 'string' that will be sent to the machine to change the setting in the command to the desired value. </param>
+            <param name="index"> An 'int' that denotes where in 'settings' the new setting value will be saved. </param>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.ChangeSetting(System.String)">
+            <summary>
+            Sends a setting change command to the machine.
+            </summary>
+            <param name="command"> A 'string' that will be sent to the machine to change the setting in the command to the desired value. </param>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.InitializeTimeouts">
+            <summary>
+            Takes the currently saved timeout settings and initializes the timeouts to more expected timeouts.
+            </summary>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.LoadLight(System.Boolean)">
+            <summary>
+            This function is used to write to the serial port to have the machine turn on the load signal light according to the 'bool' input.
+            </summary>
+            <param name="on"> A 'bool' that denotes whether to turn on or turn off the load signal light on the machine. </param>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.FindConnections">
+            <summary>
+            Opens each of the available comports at a number of baudrates and checks each for a potential connection to a TigerStop amp.
+            </summary>
+            <returns name="connections"> A 'List' of 'KeyValuePair's with comport names as 'string' keys and baudrate 'int' values of potential connections. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_Com.ChangeFlags(System.Boolean)">
+            <summary>
+            Changes all of the 'bool' flags to the value of 'change'.
+            </summary>
+            <param name="change"> A 'bool' representing the value to change all of the flags to. </param>
+        </member>
+        <member name="T:TigerStopAPI.TigerStop_IO">
+            <summary>
+            TigerStop_IO inherits TigerStop_Com and wraps its serial communication ability in simpler, easy to manage functions. 
+            This class is the main interface between outside entities and the machine, wrapping the more esoteric machine specific 
+            commands into simple functions that inform the caller if they were able to successfully complete the desired command.
+            </summary>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.#ctor(System.String,System.Int32)">
+            <summary>
+            A basic parameterized constructor for TigerStop_IO that sends 'comPort' and 'baud' to TigerStop_Com()
+            and opens a serial connection with the given 'comPort' and 'baud' and ensures that the connection
+            is successfully made.
+            </summary>
+            <param name="comPort"> A 'string' denoting the comport name that will be sent to the TigerStop_Com() constructor. </param>
+            <param name="baud"> An 'int' denoting the baud rate to connect to the serial port at that will be sent to the TigerStop_Com constructor. </param>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.Com_MessageReceived(System.Object,System.EventArgs)">
+            <summary>
+            This event listens for messages from TigerStop_Com that can be used by TigerStop_IO.
+            </summary>
+            <param name="sender"></param>
+            <param name="e"></param>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.MoveTo(System.Double)">
+            <summary>
+            Sends a move command to the machine to move to the desired position waiting for the move to finish.
+            </summary>
+            <param name="position"> A 'double' denoting the desired position to move to. </param>
+            <returns name="isDone"> A 'bool' that signals whether the move command was successfully completed. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.MoveTo(System.Double,System.Int32)">
+            <summary>
+            Sends a move command to the machine to move to the desired position, waiting for the move to finish or for the given timeout duration before returning.
+            </summary>
+            <param name="position"> A 'double' denoting the desired position to move to. </param>
+            <param name="timeout"> An 'int' denotes the number of milliseconds to timeout on. </param>
+            <returns name="isDone"> A 'bool' that signals whether the move command was successfully completed. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.MoveTo(System.Double,System.ComponentModel.BackgroundWorker@)">
+            <summary>
+            Sends a move command to the machine to move to the desired position waiting for the move to finish.
+            </summary>
+            <param name="position"> A 'double' denoting the desired position to move to. </param>
+            <param name="b"> A 'BackgroundWorker' that is running MoveTo() that may signal an impending cancellation. </param>
+            <returns name="isDone"> A 'bool' that signals whether the move command was successfully completed. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.MoveTo(System.Double,System.Int32,System.ComponentModel.BackgroundWorker@)">
+            <summary>
+            Sends a move command to the machine to move to the desired position, waiting for the move to finish or for the given timeout duration before returning.
+            </summary>
+            <param name="position"> A 'double' denoting the desired position to move to. </param>
+            <param name="timeout"> An 'int' that denotes the number of milliseconds to timeout on. </param>
+            <param name="b"> A 'BackgroundWorker' that is running MoveTo() that may signal an impending cancellation. </param>
+            <returns name="isDone"> A 'bool' that signals whether the move command was successfully completed. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.MoveTo(System.String)">
+            <summary>
+            Sends a move command to the machine to move to the desired position waiting for the move to finish.
+            </summary>
+            <param name="position"> A 'string' denoting the desired position to move to. </param>
+            <returns name="isDone"> A 'bool' that signals whether the move command was successfully completed. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.MoveTo(System.String,System.Int32)">
+            <summary>
+            Sends a move command to the machine to move to the desired position, waiting for the move to finish or for the given timeout duration before returning.
+            </summary>
+            <param name="position"> A 'string' denoting the desired position to move to. </param>
+            <param name="timeout"> An 'int' that denotes the number of milliseconds to timeout on. </param>
+            <returns name="isDone"> A 'bool' that signals whether the move command was successfully completed. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.MoveTo(System.String,System.ComponentModel.BackgroundWorker@)">
+            <summary>
+            Sends a move command to the machine to move to the desired position waiting for the move to finish.
+            </summary>
+            <param name="position"> A 'string' denoting the desired position to move to. </param>
+            <param name="b"> A 'BackgroundWorker' that is running MoveTo() that may signal an impending cancellation. </param>
+            <returns name="isDone"> A 'bool' that signals whether the move command was successfully completed. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.MoveTo(System.String,System.Int32,System.ComponentModel.BackgroundWorker@)">
+            <summary>
+            Sends a move command to the machine to move to the desired position, waiting for the move to finish or for the given timeout duration before returning.
+            </summary>
+            <param name="position"> A 'string' denoting the desired position to move to. </param>
+            <param name="timeout"> An 'int' denotes the number of milliseconds to timeout on. </param>
+            <param name="b"> A 'BackgroundWorker' that is running MoveTo() that may signal an impending cancellation. </param>
+            <returns name="isDone"> A 'bool' that signals whether the move command was successfully completed. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.HomeDevice">
+            <summary>
+            Runs the home routine to return the machine to the home position, and enable the drive if it is disabled.
+            </summary>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.CycleTool">
+            <summary>
+            Sends a cycle tool command to the machine waiting until the tool cycle is finished.
+            </summary>
+            <returns name="isDone"> A 'bool' that signals whether the cycle command was successfully completed. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.CycleTool(System.Int32)">
+            <summary>
+            Sends a cycle tool command to the machine, waiting for the tool cycle to finish or for the given timeout duration before finishing.
+            </summary>
+            <param name="timeout"> An 'int' that denotes the number of milliseconds to timeout on. </param>
+            <returns name="isDone"> A 'bool' that signals whether the cycle command was successfully completed. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.CycleTool(System.ComponentModel.BackgroundWorker@)">
+            <summary>
+            Sends a cycle tool command to the machine waiting until the tool cycle is finished. 
+            </summary>
+            <param name="b"> A 'BackgroundWorker' that is running CycleTool() that may signal an impending cancellation. </param>
+            <returns name="isDone"> A 'bool' that signals whether the cycle command was successfully completed. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.CycleTool(System.Int32,System.ComponentModel.BackgroundWorker@)">
+            <summary>
+            Sends a cycle tool command to the machine waiting until the tool cycle is finished. 
+            </summary>
+            <param name="timeout"> An 'int' that denotes the number of milliseconds to timeout on. </param>
+            <param name="b"> A 'BackgroundWorker' that is running CycleTool() that may signal an impending cancellation. </param>
+            <returns name="isDone"> A 'bool' that signals whether the cycle command was successfully completed. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.GetSetting(System.Int32)">
+            <summary>
+            Returns the value of a desired setting at 'settingIndex'.
+            </summary>
+            <param name="settingIndex"> An 'int' that relates to the index of the desired setting to retrieve. </param>
+            <returns name="settingValue"> A 'string' containing the value of the setting at 'settingIndex' or 'null' if a response wasn't received in an expected time frame. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.GetSetting(System.String)">
+            <summary>
+            Returns the value of the desired setting whose name matches 'settingName'.
+            </summary>
+            <param name="settingName"> A 'string' that matches the name of the desired setting to retrieve. </param>
+            <returns name="settingValue"> A 'string' containing the value of the setting whose name matches 'settingName' or 'null' if a response wasn't received in an expected time frame. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.GetSetting(System.Int32,System.Int32)">
+            <summary>
+            Returns the value of the desired setting at 'settingIndex', waiting for 'timeout's duration for a response.
+            </summary>
+            <param name="settingIndex"> An 'int' that relates to the index of the desired setting to retrieve. </param>
+            <param name="timeout"> An 'int' representing the desired timeout value in milliseconds the function will wait for a response. </param>
+            <returns name="settingValue"> A 'string' containing the value of the setting at 'settingIndex' or 'null' if a response was not received in the expected time frame of 'timeout'. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.GetSetting(System.String,System.Int32)">
+            <summary>
+            Returns the value of the setting whose name matches 'settingName', waiting for 'timeout's duration for a response.
+            </summary>
+            <param name="settingName"> A 'string' that matches the name of the desired setting to retrieve. </param>
+            <param name="timeout"> An 'int' representing the desired timeout value in milliseconds the function will wait for a response. </param>
+            <returns name="settingValue"> A 'string' containing the value of the setting whose name matches 'settingName' or 'null' if a response wasn't received in the expected time frame of 'timeout'. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.Stop">
+            <summary>
+            Sends a stop command to the machine, ending any action its currently in the middle of.
+            </summary>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.EmergencyStop">
+            <summary>
+            Sends an emergency stop command to the machine, ending any action its currently in the middle of and disabling the machine's drive.
+            </summary>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.Connections">
+            <summary>
+            Searches through all available com ports and baud rates to find potential connections by asking for serial numbers from machines that
+            might be on the other end of the connection.
+            </summary>
+            <returns name="connections"> A 'Dictionary' where a 'string' comport name key has an 'int' baud rate value. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.GetAnalog">
+            <summary>
+            Returns the analog values tracked by the amp.
+            </summary>
+            <returns name="values"> A 'string' array of 5 entries that hold each of the 5 analog values tracked by the amp. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.GetAnalog(System.Int32)">
+            <summary>
+            Returns the analog value related to the analog subcommand, 1-5, 'subCommand' matches.
+            </summary>
+            <param name="subCommand"> An 'int' that represents the desired subcommand value to retrieve. </param>
+            <returns name="analogValue"> A 'string' that represents the returned value of the subcommand at 'subCommand' or 'null' if a response is not received in an expected time frame. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.GetAnalog(System.Int32,System.Int32)">
+            <summary>
+            Returns the analog value related to the analog subcommand, 1-5, 'subCommand' matches. Waiting for the duration of 'timeout' for a response.
+            </summary>
+            <param name="subCommand"> An 'int' that represents the desired subcommand value to retrieve. </param>
+            <param name="timeout"> An 'int' representing the desired timeout value in milliseconds the function will wait for a response. </param>
+            <returns name="analogValue"> A 'string' that represents the returned value of the subcommand at 'subCommand' or 'null' if a response is not received in the expected time frame of 'timeout'. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.GetAnalog(System.String)">
+            <summary>
+            Returns the analog value related to the analog subcommand, 1-5, 'subCommand' matches.
+            </summary>
+            <param name="subCommand"> An 'string' that represents the desired subcommand value to retrieve. </param>
+            <returns name="analogValue"> A 'string' that represents the returned value of the subcommand at 'subCommand' or 'null' if a response is not received in an expected time frame. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.GetAnalog(System.String,System.Int32)">
+            <summary>
+            Returns the analog value related to the analog subcommand, 1-5, 'subCommand' matches. Waiting for the duration of 'timeout' for a response.
+            </summary>
+            <param name="subCommand"> An 'string' that represents the desired subcommand value to retrieve. </param>
+            <param name="timeout"> An 'int' representing the desired timeout value in milliseconds the function will wait for a response. </param>
+            <returns name="analogValue"> A 'string' that represents the returned value of the subcommand at 'subCommand' or 'null' if a response is not received in the expected time frame of 'timeout'. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.GetLog">
+            <summary>
+            Returns the 20 most recent command and error log entries.
+            </summary>
+            <returns name="log"> A 'string' array of 20 entries that hold each of the 20 command and error log entries. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.GetLog(System.Int32)">
+            <summary>
+            Returns the 20 most recent command and error log entries starting at 'logIndex' and going back.
+            </summary>
+            <param name="logIndex"> An 'int' that designates the log index to start from. </param>
+            <returns name="log"> A 'string' array of 20 entries that hold each of the command and error log entries starting at 'logIndex'. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.GetLog(System.String)">
+            <summary>
+            Returns the 20 most recent command and error log entries starting at 'logIndex' and going back.
+            </summary>
+            <param name="logIndex"> An 'string' that designates the log index to start from. </param>
+            <returns name="log"> A 'string' array of 20 entries that hold each of the command and error log entries starting at 'logIndex'. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.GetCounter">
+            <summary>
+            Returns the 25 counter values tracked by the amp.
+            </summary>
+            <returns name="counters"> A 'string' array of 25 entries that hold each of the 25 counter values tracked by the amp. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.GetCounter(System.Int32)">
+            <summary>
+            Returns the counter value related to the counter subcommand, 1-25, 'subCommand' matches.
+            </summary>
+            <param name="subCommand"> An 'int' that represents the desired subcommand value to retrieve. </param>
+            <returns name="counterValue"> A 'string' that represents the returned value of the subcommand at 'subCommand' or 'null' if a response is not received in an expected time frame. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.GetCounter(System.Int32,System.Int32)">
+            <summary>
+            Returns the counter value related to the counter subcommand, 1-25, 'subCommand' matches. Waiting for the duration of 'timeout' for a response.
+            </summary>
+            <param name="subCommand"> An 'int' that represents the desired subcommand value to retrieve. </param>
+            <param name="timeout"> An 'int' representing the desired timeout value in milliseconds the function will wait for a response. </param>
+            <returns name="counterValue"> A 'string' that represents the returned value of the subcommand at 'subCommand' or 'null' if a response is not received in the expected time frame of 'timeout'. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.GetCounter(System.String)">
+            <summary>
+            Returns the counter value related to the counter subcommand, 1-25, 'subCommand' matches.
+            </summary>
+            <param name="subCommand"> A 'string' that represents the desired subcommand value to retrieve. </param>
+            <returns name="counterValue"> A 'string' that represents the returned value of the subcommand at 'subCommand' or 'null' if a response is not received in an expected time frame. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.GetCounter(System.String,System.Int32)">
+            <summary>
+            Returns the counter value related to the counter subcommand, 1-25, 'subCommand' matches. Waiting for the duration of 'timeout' for a response.
+            </summary>
+            <param name="subCommand"> A 'string' that represents the desired subcommand value to retrieve. </param>
+            <param name="timeout"> An 'int' representing the desired timeout value in milliseconds the function will wait for a response. </param>
+            <returns name="counterValue"> A 'string' that represents the returned value of the subcommand at 'subCommand' or 'null' if a response is not received in the expected time frame of 'timeout'. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.GetPosition">
+            <summary>
+            Returns the current position of the machine.
+            </summary>
+            <returns name="pos"> A 'double' that represents the returned current position from the machine or 'NaN' if no response is received in an expected time frame. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.GetPosition(System.Int32)">
+            <summary>
+            Returns the current position of the machine, waiting for the duration of 'timeout' for a response.
+            </summary>
+            <param name="timeout"> An 'int' representing the desired timeout value in milliseconds the function will wait for a response. </param>
+            <returns name="pos"> A 'double' that represents the returned current position from the machine or 'NaN' if no response is received in the expected time frame of 'timeout'. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.GetStatus">
+            <summary>
+            Returns the current status of the machine.
+            </summary>
+            <returns name="state"> An 'int' that represents the returned status of the machine or '-1' if no response is received in an expected time frame. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.GetStatus(System.Int32)">
+            <summary>
+            Returns the current status of the machine, waiting for the duration of 'timeout' for a response.
+            </summary>
+            <param name="timeout"> An 'int' representing the desired timeout value in milliseconds the function will wait for a response. </param>
+            <returns name="state"> An 'int' that represents the returned status of the machine or '-1' if no response is received in the expected time frame of 'timeout'. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.DriveSleep">
+            <summary>
+            Sends the drive sleep command to turn off the amp drive.
+            </summary>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.DriveWake">
+            <summary>
+            Sends the wake up command to turn on the amp drive.
+            </summary>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.WriteCommand(System.String)">
+            <summary>
+            Sends 'command' to the machine to execute.
+            </summary>
+            <param name="command"> A 'string' representing the command being sent to the machine to execute. </param>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.UpdateSetting(System.String,System.Double)">
+            <summary>
+            Changes the setting value of 'settingName' to 'newValue'.
+            </summary>
+            <param name="settingName"> A 'string' the represents the name of the setting to change. </param>
+            <param name="newValue"> A 'double' that represents the new value 'settingName' is being changed to. </param>
+            <returns name="isUpdated"> A 'bool' that signals whether the setting was successfully changed. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.UpdateSetting(System.String,System.String)">
+            <summary>
+            Changes the setting value of 'settingName' to 'newValue'.
+            </summary>
+            <param name="settingName"> A 'string' the represents the name of the setting to change. </param>
+            <param name="newValue"> An 'string' that represents the new value 'settingName' is being changed to. </param>
+            <returns name="isUpdated"> A 'bool' that signals whether the setting was successfully changed. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.UpdateSetting(System.Int32,System.Double)">
+            <summary>
+            Changes the setting value at 'settingIndex' to 'newValue'.
+            </summary>
+            <param name="settingIndex"> An 'int' the represents the index of the setting to change. </param>
+            <param name="newValue"> An 'int' that represents the new value the setting is being changed to. </param>
+            <returns name="isUpdated"> A 'bool' that signals whether the setting was successfully changed. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.UpdateSetting(System.Int32,System.String)">
+            <summary>
+            Changes the setting value at 'settingIndex' to 'newValue'.
+            </summary>
+            <param name="settingIndex"> An 'int' the represents the index of the setting to change. </param>
+            <param name="newValue"> A 'double' that represents the new value the setting is being changed to. </param>
+            <returns name="isUpdated"> A 'bool' that signals whether the setting was successfully changed. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.DetectToolCycle">
+            <summary>
+            Listens for the expected sequence of acknowledgments from the machine, making sure that the deadman off signal followed by the deadman on signal
+            is received by the system, meaning a full tool cycle occurred.
+            </summary>
+            <returns name="cycled"> A 'bool' denoting whether a deadman off and on signal was received in sequence, defining a full tool cycle has occurred. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.DetectToolCycle(System.Int32)">
+            <summary>
+            Listens for the expected sequence of acknowledgments from the machine, make sure that the deadman off signal followed by the deadman on signal
+            us received by the system, meaning a full tool cycle occurred. Each of the waiting events will wait for the duration of 'timeout' for a response.
+            </summary>
+            <param name="timeout"> An 'int' representing the desired timeout value in milliseconds the function will wait for a response. </param>
+            <returns name="cycled"> A 'bool' denoting whether a deadman off and on signal was received in sequence, defining a full tool cycle has occurred. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.DetectToolCycle(System.Int32,System.Int32)">
+            <summary>
+            Listens for the expected sequence of acknowledgments from the machine, make sure that the deadman off signal followed by the deadman on signal
+            us received by the system, meaning a full tool cycle occurred. The first waiting event will wait for the duration of 'timeout1' for a response,
+            and the second waiting event will wait for the duration of 'timeout2' for a response.
+            </summary>
+            <param name="timeout1"> An 'int' representing the desired timeout value in milliseconds the first event will wait for a response. </param>
+            <param name="timeout2"> An 'int' representing the desired timeout value in milliseconds the second event will wait for a response. </param>
+            <returns name="cycled"> A 'bool' denoting whether a deadman off and on signal was received in sequence, defining a full tool cycle has occurred. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.DetectToolCycle(System.ComponentModel.BackgroundWorker@)">
+            <summary>
+            Listens for the expected sequence of acknowledgments from the machine, make sure that the deadman off signal followed by the deadman on signal
+            us received by the system, meaning a full tool cycle occurred.
+            </summary>
+            <param name="b"> A 'BackgroundWorker' that is running DetectToolCycle() that may signal an impending cancellation. </param>
+            <returns name="cycled"> A 'bool' denoting whether a deadman off and on signal was received in sequence, defining a full tool cycle has occurred. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.DetectToolCycle(System.Int32,System.ComponentModel.BackgroundWorker@)">
+            <summary>
+            Listens for the expected sequence of acknowledgments from the machine, make sure that the deadman off signal followed by the deadman on signal
+            us received by the system, meaning a full tool cycle occurred. Each of the waiting events will wait for the duration of 'timeout' for a response.
+            </summary>
+            <param name="timeout"> An 'int' representing the desired timeout value in milliseconds the function will wait for a response. </param>
+            <param name="b"> A 'BackgroundWorker' that is running DetectToolCycle() that may signal an impending cancellation. </param>
+            <returns name="cycled"> A 'bool' denoting whether a deadman off and on signal was received in sequence, defining a full tool cycle has occurred. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.DetectToolCycle(System.Int32,System.Int32,System.ComponentModel.BackgroundWorker@)">
+            <summary>
+            Listens for the expected sequence of acknowledgments from the machine, make sure that the deadman off signal followed by the deadman on signal
+            us received by the system, meaning a full tool cycle occurred. The first waiting event will wait for the duration of 'timeout1' for a response,
+            and the second waiting event will wait for the duration of 'timeout2' for a response.
+            </summary>
+            <param name="timeout1"> An 'int' representing the desired timeout value in milliseconds the first event will wait for a response. </param>
+            <param name="timeout2"> An 'int' representing the desired timeout value in milliseconds the second event will wait for a response. </param>
+            <param name="b"> A 'BackgroundWorker' that is running DetectToolCycle() that may signal an impending cancellation. </param>
+            <returns name="cycled"> A 'bool' denoting whether a deadman off and on signal was received in sequence, defining a full tool cycle has occurred. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.IO_Connection(System.Int32,System.Boolean)">
+            <summary>
+            Turns the desired IO connection on the IO panel on or off depending on 'onOff'.
+            </summary>
+            <param name="ioNum"> An 'int' denoting which IO connection, 1 - 12, on the IO panel to change. If 'ioNum' is outside of the range 1 - 12, 'false' is returned. </param>
+            <param name="onOff"> A 'bool' that signals whether to turn the connection on if 'onOff' is 'true' and off if 'onOff' is 'false'. </param>
+            <returns name="acknowledged"> A 'bool' denoting whether an acknowledgment was received for the command. </returns>
+        </member>
+        <member name="M:TigerStopAPI.TigerStop_IO.IO_Connection(System.Int32,System.Boolean,System.Int32)">
+            <summary>
+            Turns the desired IO connection on the IO panel on or off depending on 'onOff', waiting for the duration of 'timeout' for a response.
+            </summary>
+            <param name="ioNum"> An 'int' denoting which IO connection, 1 - 12, on the IO panel to change. If 'ioNum' is outside of the range 1 - 12, 'false' is returned. </param>
+            <param name="onOff"> A 'bool' that signals whether to turn the connection on if 'onOff' is 'true' and off if 'onOff' is 'false'. </param>
+            <param name="timeout"> An 'int' representing the desired timeout value in milliseconds the event will wait for a response. </param>
+            <returns name="acknowledged"> A 'bool' denoting whether an acknowledgment was received for the command. </returns>
+        </member>
+    </members>
+</doc>
