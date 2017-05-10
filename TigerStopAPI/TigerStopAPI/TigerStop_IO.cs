@@ -918,22 +918,7 @@ namespace TigerStopAPI
         /// <returns name="pos"> A 'double' that represents the returned current position from the machine or 'NaN' if no response is received in an expected time frame. </returns>
         public double GetPosition()
         {
-            double pos = 0.00;
-
-            base.QueueCommand("p");
-
-            ackEvent.Reset();
-
-            if (ackEvent.WaitOne(2000))
-            {
-                pos = Convert.ToDouble(AckMessage.TrimEnd('\r'));
-            }
-            else
-            {
-                pos = double.NaN;
-            }
-
-            return pos;
+            return GetPosition(2000);
         }
 
         // --- public double GetPosition(int timeout) ---
@@ -952,14 +937,14 @@ namespace TigerStopAPI
 
             if (ackEvent.WaitOne(timeout))
             {
-                pos = Convert.ToDouble(AckMessage.TrimEnd('\r'));
-            }
-            else
-            {
-                pos = double.NaN;
+                double value;
+                if (double.TryParse(AckMessage.TrimEnd('\r'), out value))
+                {
+                    return value;
+                }
             }
 
-            return pos;
+            return double.NaN;
         }
 
         // --- public int GetStatus() ---
