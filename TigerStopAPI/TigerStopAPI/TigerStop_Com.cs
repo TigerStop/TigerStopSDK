@@ -596,6 +596,9 @@ namespace TigerStopAPI
             }
             else
             {
+                // Clear the NACK out of the buffer.
+                readBuffer.Clear();
+
                 RetryCommand();
             }
         }
