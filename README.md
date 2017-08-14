@@ -4,7 +4,9 @@
 -----------------------------
 ### A [TigerStopSDK-Example](https://github.com/TigerStop/TigerStopSDK-Example)
 > C# code that can be used to create a desktop program to interact with a TigerStop machine amplifier.
-
+-----------------------------
+### General Information on Communications
+> Can be foun in our [Wiki pages](https://github.com/TigerStop/TigerStopSDK/wiki)
 
 
 ## License
