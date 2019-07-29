@@ -1,8 +1,8 @@
 {
   "ExpandedNodes": [
     "",
-    "\\TigerStopAPI"
+    "\\TigerStopAPI",
+    "\\TigerStopAPI\\TigerStopAPI"
   ],
-  "SelectedNode": "\\TigerStopAPI\\TigerStopAPI.sln",
   "PreviewInSolutionExplorer": false
 }
