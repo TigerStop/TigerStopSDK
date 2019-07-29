@@ -61,6 +61,7 @@ namespace TigerStopAPI
         private bool isMoving = false;
         private bool isMoveStart = false;
         private bool isHoming = false;
+        private bool isMinMaxing = false;
         //  -  CYCLING
         private bool isCyclingTool = false;
         private bool isCycleStart = false;
@@ -80,6 +81,7 @@ namespace TigerStopAPI
         private static readonly byte[] moveHomeCommand = { 0x6d, 0x68, 0x0d, 0x0a };
         private static readonly byte[] moveStopCommand = { 0x6d, 0x73, 0x0d, 0x0a };
         private static readonly byte[] moveEStopCommand = { 0x6d, 0x65, 0x0d, 0x0a };
+        private static readonly byte[] moveMinMaxCommand = { 0x6d, 0x6d, 0x0d, 0x0a };
         private static readonly byte[] positionQueryCommand = { 0x70, 0x0d, 0x0a };
         private static readonly byte[] scanCommand = { 0x02, 0x52, 0x00, 0x01, 0x80, 0x00, 0x00, 0x00, 0x0d, 0x0a };
         private static readonly byte[] statusQueryCommand = { 0x73, 0x0d, 0x0a };
@@ -721,6 +723,12 @@ namespace TigerStopAPI
                     isCycleStart = true;
                     WriteToSerial(moveToolCommand);
                     break;
+                //Move Min-Max
+                case 0x6d:
+                    TimeOut = homeTimeout * 3;
+                    isMinMaxing = true;
+                    WriteToSerial(moveMinMaxCommand);
+                    break;                    
             }
         }
 
