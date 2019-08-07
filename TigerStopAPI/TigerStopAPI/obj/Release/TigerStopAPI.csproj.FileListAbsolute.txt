@@ -3,3 +3,9 @@ C:\Users\jshoup\Documents\TigerStopAPI\TigerStopAPI\bin\Release\TigerStopAPI.pdb
 C:\Users\jshoup\Documents\TigerStopAPI\TigerStopAPI\obj\Release\TigerStopAPI.csprojResolveAssemblyReference.cache
 C:\Users\jshoup\Documents\TigerStopAPI\TigerStopAPI\obj\Release\TigerStopAPI.dll
 C:\Users\jshoup\Documents\TigerStopAPI\TigerStopAPI\obj\Release\TigerStopAPI.pdb
+C:\Users\ckoch\Source\Repos\TigerStopSDK\TigerStopAPI\TigerStopAPI\obj\Release\TigerStopAPI.csprojAssemblyReference.cache
+C:\Users\ckoch\Source\Repos\TigerStopSDK\TigerStopAPI\TigerStopAPI\obj\Release\TigerStopAPI.csproj.CoreCompileInputs.cache
+C:\Users\ckoch\Source\Repos\TigerStopSDK\TigerStopAPI\TigerStopAPI\obj\Release\TigerStopAPI.dll
+C:\Users\ckoch\Source\Repos\TigerStopSDK\TigerStopAPI\TigerStopAPI\obj\Release\TigerStopAPI.pdb
+C:\Users\ckoch\Source\Repos\TigerStopSDK\TigerStopAPI\TigerStopAPI\bin\Release\TigerStopAPI.dll
+C:\Users\ckoch\Source\Repos\TigerStopSDK\TigerStopAPI\TigerStopAPI\bin\Release\TigerStopAPI.pdb

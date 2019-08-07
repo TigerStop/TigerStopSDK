@@ -725,7 +725,7 @@ namespace TigerStopAPI
                     break;
                 //Move Min-Max
                 case 0x6d:
-                    TimeOut = homeTimeout * 3;
+                    TimeOut = TimeSpan.FromSeconds(homeTimeout.TotalSeconds * 2.1);
                     isMinMaxing = true;
                     WriteToSerial(moveMinMaxCommand);
                     break;                    
