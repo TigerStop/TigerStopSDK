@@ -19,6 +19,7 @@ namespace TigerStopAPI
         private AutoResetEvent deadmanOffEvent = new AutoResetEvent(false);
         private AutoResetEvent deadmanOnEvent = new AutoResetEvent(false);
         private AutoResetEvent homingEvent = new AutoResetEvent(false);
+        private AutoResetEvent minmaxEvent = new AutoResetEvent(false);
 
         //  =  =  =  EVENTS  =  =  =
         public EventHandler IO_Error;
@@ -360,7 +361,7 @@ namespace TigerStopAPI
             return isDone;
         }
 
-        // --- public bool HomeDevice() ---
+        // --- public void HomeDevice() ---
         /// <summary>
         /// Runs the home routine to return the machine to the home position, and enable the drive if it is disabled.
         /// </summary>
@@ -371,6 +372,19 @@ namespace TigerStopAPI
             base.QueueCommand("mh");
 
             homingEvent.WaitOne(base.TimeOut);
+        }
+
+        // --- public bool FindEndLimits() ---
+        /// <summary>
+        /// Runs the min-max routine to discover the end limits and working length of the machine.
+        /// </summary>
+        public void FindEndLimits()
+        {
+            minmaxEvent.Reset();
+
+            base.QueueCommand("mm");
+
+            minmaxEvent.WaitOne(base.TimeOut);
         }
 
         // --- public void CycleTool() ---
