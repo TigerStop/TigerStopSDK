@@ -672,7 +672,7 @@ namespace TigerStopAPI
             }
         }
 
-        // --- protected void QueueCommand(string command) ---
+        // --- protected void QueueCommand(byte[] command) ---
         /// <summary>
         /// This function is the main interface between the rest of the system and the machine. Any commands that need to be sent to the machine runs through this command.
         /// It takes a 'byte[]' command to send to the machine. If the system already has commands queued up, it will add the command to the queue, otherwise it will call 

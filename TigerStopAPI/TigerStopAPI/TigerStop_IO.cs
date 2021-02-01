@@ -1526,6 +1526,7 @@ namespace TigerStopAPI
         // --- public List<double> ScanDefectedLength() ---
         /// <summary>
         /// Sends a scan command to the machine and waits until all of the UV detected marks and the material length have been determined and returns them as a 'List'.
+        /// NOTE: 'marks' values are converted to imperial or metric automatically based on the current 'MMEnable' value.
         /// </summary>
         /// <returns name="marks"> Returns a 'List' of 'double's that define the position of each defect as well as the length of the material, as the final value at index n-1. </returns>
         public List<double> ScanDefectedLength()
@@ -1554,6 +1555,7 @@ namespace TigerStopAPI
         // --- public List<double> ScanDefectedLength(int timeout) ---
         /// <summary>
         /// Sends a scan command to the machine and waits until all of the UV detected marks and the material length have been determined, or the duration of 'timeout', and returns them as a 'List'.
+        /// NOTE: 'marks' values are converted to imperial or metric automatically based on the current 'MMEnable' value.
         /// </summary>
         /// <param name="timeout"> An 'int' representing the desired timeout value in milliseconds the event will wait for a response. </param>
         /// <returns name="marks"> Returns a 'List' of 'double's that define the position of each defect as well as the length of the material, as the final value at index n-1. </returns>
@@ -1565,16 +1567,17 @@ namespace TigerStopAPI
 
             base.QueueCommand(new byte[] { 0x02, 0x52, 0x00, 0x01, 0x80, 0x00, 0x00, 0x00, 0x0d, 0x0a });
 
-            ackEvent.WaitOne(timeout);
-
-            try
+            if (ackEvent.WaitOne(timeout))
             {
-                marks = AckMessage.Split(';').ToList().Select(s => double.Parse(s)).ToList();
-            }
-            catch
-            {
+                try
+                {
+                    marks = AckMessage.Split(';').ToList().Select(s => double.Parse(s)).ToList();
+                }
+                catch
+                {
 
-                marks.Clear();
+                    marks.Clear();
+                }
             }
 
             return marks;
@@ -1621,14 +1624,15 @@ namespace TigerStopAPI
 
             base.QueueCommand("tm");
 
-            measureEvent.WaitOne(timeout);
+            if (measureEvent.WaitOne(timeout))
+            {
+                double.TryParse(AckMessage.TrimStart('T', 'M', 'F', ' '), out length);
 
-            double.TryParse(AckMessage.TrimStart('T', 'M', 'F', ' '), out length);
-
-            //if(want metric)
-            //{
-            //  length * 25.4;
-            //}
+                //if(want metric)
+                //{
+                //  length * 25.4;
+                //}
+            }
 
             return length;
         }
