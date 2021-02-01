@@ -1586,6 +1586,7 @@ namespace TigerStopAPI
         // --- public double RandomLengthMeasure() ---
         /// <summary>
         /// Sends a measure command to the machine and waits until the material length has been determined.
+        /// NOTE: 'RandomLengthMeasure' requires AMP 5.62 firmware or greater.
         /// NOTE: 'length' values will always be in imperial inches. If metric values are desired, uncomment conversion and modify as needed.
         /// </summary>
         /// <returns name="length"> A 'double' denoting the measured material length. </returns>
@@ -1612,6 +1613,7 @@ namespace TigerStopAPI
         // --- public double RandomLengthMeasure(int timeout) ---
         /// <summary>
         /// Sends a measure command to the machine and waits until the material length has been determined or the duration of 'timeout'.
+        /// NOTE: 'RandomLengthMeasure' requires AMP 5.62 firmware or greater.
         /// NOTE: 'length' values will always be in imperial inches. If metric values are desired, uncomment conversion and modify as needed.
         /// </summary>
         /// <param name="timeout"> An 'int' representing the desired timeout value in milliseconds the event will wait for a response. </param>
