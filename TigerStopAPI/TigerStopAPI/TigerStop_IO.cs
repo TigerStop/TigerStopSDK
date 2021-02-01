@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Threading;
 
 namespace TigerStopAPI
@@ -19,6 +20,7 @@ namespace TigerStopAPI
         private AutoResetEvent deadmanOffEvent = new AutoResetEvent(false);
         private AutoResetEvent deadmanOnEvent = new AutoResetEvent(false);
         private AutoResetEvent homingEvent = new AutoResetEvent(false);
+        private AutoResetEvent measureEvent = new AutoResetEvent(false);
 
         //  =  =  =  EVENTS  =  =  =
         public EventHandler IO_Error;
@@ -102,7 +104,8 @@ namespace TigerStopAPI
             // Copy the message for the waiting event to look at.
             AckMessage = ack.Message;
 
-            // The system needs to look out for various kinds of acks; a moving ack, "MGF", a cycling ack, "MTF", two dead man acks "DMS" and "DMF", or a general ack.
+            // The system needs to look out for various kinds of acks; a moving ack, "MGF", a cycling ack, "MTF", two dead man acks "DMS" and "DMF", 
+            // a homing ack, "MHF", a measuring ack, "TMF", or a general ack.
             if (ack.Message.Contains("MGF"))
             {
                 movingEvent.Set();
@@ -123,7 +126,10 @@ namespace TigerStopAPI
             {
                 homingEvent.Set();
             }
-            // Otherwise, it was a general ack and release the waiting event.
+            else if (ack.Message.Contains("TMF"))
+            {
+                measureEvent.Set();
+            }
             else
             {
                 ackEvent.Set();
@@ -1515,6 +1521,116 @@ namespace TigerStopAPI
             }
 
             return acknowledged;
+        }
+
+        // --- public List<double> ScanDefectedLength() ---
+        /// <summary>
+        /// Sends a scan command to the machine and waits until all of the UV detected marks and the material length have been determined and returns them as a 'List'.
+        /// </summary>
+        /// <returns name="marks"> Returns a 'List' of 'double's that define the position of each defect as well as the length of the material, as the final value at index n-1. </returns>
+        public List<double> ScanDefectedLength()
+        {
+            List<double> marks = new List<double>();
+
+            ackEvent.Reset();
+
+            base.QueueCommand(new byte[] { 0x02, 0x52, 0x00, 0x01, 0x80, 0x00, 0x00, 0x00, 0x0d, 0x0a });
+
+            ackEvent.WaitOne(-1);
+
+            try
+            {
+                marks = AckMessage.Split(';').ToList().Select(s => double.Parse(s)).ToList();
+            }
+            catch
+            {
+
+                marks.Clear();
+            }
+
+            return marks;
+        }
+
+        // --- public List<double> ScanDefectedLength(int timeout) ---
+        /// <summary>
+        /// Sends a scan command to the machine and waits until all of the UV detected marks and the material length have been determined, or the duration of 'timeout', and returns them as a 'List'.
+        /// </summary>
+        /// <param name="timeout"> An 'int' representing the desired timeout value in milliseconds the event will wait for a response. </param>
+        /// <returns name="marks"> Returns a 'List' of 'double's that define the position of each defect as well as the length of the material, as the final value at index n-1. </returns>
+        public List<double> ScanDefectedLength(int timeout)
+        {
+            List<double> marks = new List<double>();
+
+            ackEvent.Reset();
+
+            base.QueueCommand(new byte[] { 0x02, 0x52, 0x00, 0x01, 0x80, 0x00, 0x00, 0x00, 0x0d, 0x0a });
+
+            ackEvent.WaitOne(timeout);
+
+            try
+            {
+                marks = AckMessage.Split(';').ToList().Select(s => double.Parse(s)).ToList();
+            }
+            catch
+            {
+
+                marks.Clear();
+            }
+
+            return marks;
+        }
+
+        // --- public double RandomLengthMeasure() ---
+        /// <summary>
+        /// Sends a measure command to the machine and waits until the material length has been determined.
+        /// NOTE: 'length' values will always be in imperial inches. If metric values are desired, uncomment conversion and modify as needed.
+        /// </summary>
+        /// <returns name="length"> A 'double' denoting the measured material length. </returns>
+        public double RandomLengthMeasure()
+        {
+            double length = -1;
+
+            measureEvent.Reset();
+
+            base.QueueCommand("tm");
+
+            measureEvent.WaitOne(-1);
+
+            double.TryParse(AckMessage.TrimStart('T', 'M', 'F', ' '), out length);
+
+            //if(want metric)
+            //{
+            //  length * 25.4;
+            //}
+
+            return length;
+        }
+
+        // --- public double RandomLengthMeasure(int timeout) ---
+        /// <summary>
+        /// Sends a measure command to the machine and waits until the material length has been determined or the duration of 'timeout'.
+        /// NOTE: 'length' values will always be in imperial inches. If metric values are desired, uncomment conversion and modify as needed.
+        /// </summary>
+        /// <param name="timeout"> An 'int' representing the desired timeout value in milliseconds the event will wait for a response. </param>
+        /// <returns></returns>
+        public double RandomLengthMeasure(int timeout)
+        {
+            double length = -1;
+
+            measureEvent.Reset();
+
+            base.QueueCommand("tm");
+
+            measureEvent.WaitOne(timeout);
+
+            double.TryParse(AckMessage.TrimStart('T', 'M', 'F', ' '), out length);
+
+            //if(want metric)
+            //{
+            //  length * 25.4;
+            //}
+
+            return length;
         }
     }
 }

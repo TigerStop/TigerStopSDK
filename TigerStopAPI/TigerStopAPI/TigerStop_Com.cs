@@ -68,6 +68,8 @@ namespace TigerStopAPI
         private bool isDmOn = false;
         //  -  SCAN
         private bool isScanning = false;
+        //  -  MEASURE
+        private bool isMeasuring = false;
 
         //  =  =  =  LISTS  =  =  =
         private List<DateTime> ackTimes = new List<DateTime>();
@@ -469,7 +471,7 @@ namespace TigerStopAPI
                         {
                             isMoveStart = false;
                             isMoving = true;
-                            
+
                             double.TryParse(string.Join("", readBuffer.ToArray()).TrimStart(new char[] { 'M', 'G', 'S', ' ' }).TrimEnd(new char[] { '\r', '\n' }), out targetPosition);
                         }
                         else
@@ -477,10 +479,10 @@ namespace TigerStopAPI
                             isCycleStart = false;
                             isCyclingTool = true;
                         }
-                        
+
                         lastAck.Acknowledgement = string.Join("", readBuffer.ToArray());
                         lastAck.TimeRecieved = DateTime.Now;
-                        
+
                         readBuffer.Clear();
                     }
                     // Finished a move or tool cycle.
@@ -489,7 +491,7 @@ namespace TigerStopAPI
                         if (string.Join("", readBuffer.ToArray()).Contains("MGF"))
                         {
                             double finalPosition;
-                            
+
                             lastAck.Acknowledgement = "MGF";
                             lastAck.TimeRecieved = DateTime.Now;
 
@@ -497,7 +499,7 @@ namespace TigerStopAPI
                             {
                                 Position = finalPosition;
                             }
-                            
+
                             SendData(this, new MessageEvent("MGF"));
 
                             isMoving = false;
@@ -506,10 +508,10 @@ namespace TigerStopAPI
                         {
                             isDmOff = false;
                             isDmOn = false;
-                            
+
                             lastAck.Acknowledgement = "MTF";
                             lastAck.TimeRecieved = DateTime.Now;
-                            
+
                             SendData(this, new MessageEvent("MTF"));
 
                             isCyclingTool = false;
@@ -522,7 +524,27 @@ namespace TigerStopAPI
 
                             CheckSamePosition();
                         }
-                        
+
+                        readBuffer.Clear();
+
+                        ClearCommand(false);
+
+                        SendCommand();
+                    }
+                    // Is performing random length measurement.
+                    else if (isMeasuring)
+                    {
+                        //We received a 'TMF' ack, pass the ack and length along.
+                        if (string.Join("", readBuffer.ToArray()).Contains("TMF"))
+                        {
+                            lastAck.Acknowledgement = "TMF";
+                            lastAck.TimeRecieved = DateTime.Now;
+
+                            SendData(this, new MessageEvent(string.Join("", readBuffer.ToArray())));
+
+                            isMeasuring = false;
+                        }
+
                         readBuffer.Clear();
 
                         ClearCommand(false);
@@ -538,21 +560,26 @@ namespace TigerStopAPI
                             lastAck.TimeRecieved = DateTime.Now;
 
                             SendData(this, new MessageEvent("MHF"));
-                            
+
                             isHoming = false;
 
                             ClearCommand(false);
-                            
+
                             SendCommand();
                         }
-                        
+
                         readBuffer.Clear();
+
+                        ClearCommand(false);
+
+                        SendCommand();
                     }
+                    // Is expecting a single ack, such as a response to the 'positionQueryCommand' or 'statusQueryCommand'. Unless performing an additional process, pass ack along.
                     else if (!isMoving && !isCyclingTool)
                     {
                         lastAck.Acknowledgement = string.Join("", readBuffer.ToArray());
                         lastAck.TimeRecieved = DateTime.Now;
-                        
+
                         if (!lastCommand.Command.SequenceEqual(scanCommand))
                         {
                             SendData(this, new MessageEvent(string.Join("", readBuffer.ToArray())));
@@ -570,18 +597,20 @@ namespace TigerStopAPI
 
                             ClearCommand(false);
                         }
-                        
+
                         readBuffer.Clear();
 
                         SendCommand();
                     }
                 }
+                // Finished a scan command.
                 else
                 {
                     lastAck.Acknowledgement = string.Join("", readBuffer.ToArray());
                     lastAck.TimeRecieved = DateTime.Now;
                     
-                    SendData(this, new MessageEvent(string.Join(",", scanMarks.ToArray())));
+                    // Separate the marks by ';' to prevent localization confusion in cultures that use ',' in place of the '.' when defining non-whole numbers.
+                    SendData(this, new MessageEvent(string.Join(";", scanMarks.ToArray())));
                     
                     scanMarks.Clear();
                     
@@ -639,6 +668,44 @@ namespace TigerStopAPI
             else
             {
                 writeBuffer.Add(cmd);
+                SendCommand();
+            }
+        }
+
+        // --- protected void QueueCommand(string command) ---
+        /// <summary>
+        /// This function is the main interface between the rest of the system and the machine. Any commands that need to be sent to the machine runs through this command.
+        /// It takes a 'byte[]' command to send to the machine. If the system already has commands queued up, it will add the command to the queue, otherwise it will call 
+        /// SendCommand() to get the command processed immediately.
+        /// </summary>
+        /// <param name="command"> A 'byte[]' command that will be sent to the machine. </param>
+        protected void QueueCommand(byte[] command)
+        {
+            if (command.SequenceEqual(moveStopCommand))
+            {
+                WriteToSerial(moveStopCommand);
+                ClearCommand(true);
+
+                ChangeFlags(false);
+
+                ClearPort();
+            }
+            else if (command.SequenceEqual(moveEStopCommand))
+            {
+                WriteToSerial(moveEStopCommand);
+                ClearCommand(true);
+
+                ChangeFlags(false);
+
+                ClearPort();
+            }
+            else if (writeBuffer.Count != 0)
+            {
+                writeBuffer.Add(command);
+            }
+            else
+            {
+                writeBuffer.Add(command);
                 SendCommand();
             }
         }
